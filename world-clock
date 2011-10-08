@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2011 by Stefano Palazzo
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+import gtk
+import appindicator
+import gobject
+import pytz
+import datetime
+
+def now(timezone, fmt):
+    now = datetime.datetime.utcnow().replace(tzinfo=pytz.UTC)
+    return now.astimezone(pytz.timezone(timezone)).strftime(fmt)
+
+
+class AppIndicator (appindicator.Indicator):
+
+    timezones = [
+        ('Seattle', 'US/Pacific'),
+        ('Phoenix', 'US/Mountain'),
+        ('Dallas', 'US/Central'),
+        ('New York', 'US/Eastern'),
+        ('Universal Time', 'UTC'),
+        ('London', 'Europe/London'),
+        ('Berlin', 'Europe/Berlin'),
+        ('Tehran', 'Asia/Tehran'),
+        ('New Delhi', 'Asia/Kolkata'),
+        ('Tokyo', 'Asia/Tokyo'),
+        ('Wellington', 'NZ'),
+    ]
+
+    fmt = "%H:%M"
+    items = []
+
+    def __init__(self, name, icon, category):
+        appindicator.Indicator.__init__(self, name, icon, category)
+        self.set_status(appindicator.STATUS_ACTIVE)
+        self.menu = gtk.Menu()
+        self.set_menu(self.menu)
+        self.menu_setup()
+        self.menu.show_all()
+        self.update()
+        gtk.main()
+
+    def menu_setup(self):
+        for name, tz in self.timezones:
+            label = now(tz, self.fmt) + "    " + name
+            item = gtk.MenuItem(label)
+            self.items.append((item, name, tz))
+            self.menu.append(item)
+        self.menu.append(gtk.MenuItem())
+        self.quit_item = gtk.MenuItem("Quit")
+        self.menu.append(self.quit_item)
+        self.quit_item.connect("activate", self.quit)
+
+    def update(self):
+        for item, name, tz in self.items:
+            item.set_label(now(tz, self.fmt) + "    " + name)
+        gobject.timeout_add(100, self.update)
+
+    def quit(self, *data):
+        gtk.main_quit()
+
+
+AppIndicator('world-clock', 'tray-extended-away', 0)
